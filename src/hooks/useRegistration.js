@@ -1,0 +1,70 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+export const useRegistration = (initialFormData, userType, validationFunction) => {
+  const navigate = useNavigate();
+  const { register } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState(initialFormData);
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const validationError = validationFunction(formData);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = { ...formData, tipo_usuario: userType };
+      const res = await register(payload);
+      
+      // Navigate to validation, assuming success
+      alert('Cadastro realizado com sucesso! Verifique seu email para o código de validação.');
+      navigate('/validar-codigo', { state: { email: formData.email } });
+
+    } catch (err) {
+      let errorMsg = 'Erro ao realizar o cadastro.';
+      if (err.response && err.response.data) {
+          // Pega a primeira chave de erro do objeto de detalhes, se existir
+          const errorDetail = err.response.data.detail;
+          if (typeof errorDetail === 'object' && errorDetail !== null) {
+              const firstErrorKey = Object.keys(errorDetail)[0];
+              errorMsg = `${firstErrorKey}: ${errorDetail[firstErrorKey][0]}`;
+          } else if (typeof errorDetail === 'string') {
+              errorMsg = errorDetail;
+          }
+      }
+      console.error('Erro no registro:', err);
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    formData,
+    setFormData,
+    loading,
+    analyzing,
+    setAnalyzing,
+    error,
+    setError,
+    handleChange,
+    handleSubmit,
+  };
+};

@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BairristaCargo - Conectando Transportes</title>
+    <meta name="description" content="Plataforma que conecta quem precisa transportar com os melhores transportadores do Brasil.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        :root {
+            --primary-color: #DC143C;
+            --primary-dark: #B01030;
+            --secondary-color: #1a1a1a;
+            --accent-red: #DC143C;
+            --accent-green: #2D8B3C;
+            --accent-yellow: #FFD700;
+            --text-dark: #1a1a1a;
+            --text-light: #666666;
+            --bg-light: #FFF9F0;
+            --white: #ffffff;
+            --border: #e0e0e0;
+        }
+
+        body {
+            min-height: 100vh;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 5%;
+        }
+
+        /* Header */
+        .header {
+            background: var(--secondary-color);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            padding: 0 5%;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg,
+                var(--accent-green) 0%,
+                var(--accent-green) 33.33%,
+                var(--accent-red) 33.33%,
+                var(--accent-red) 66.66%,
+                var(--accent-yellow) 66.66%,
+                var(--accent-yellow) 100%
+            );
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-left {
+            display: flex;
+            gap: 25px;
+        }
+
+        .nav-left a {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .nav-left a:hover {
+            color: var(--primary-color);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-secondary {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.85rem;
+            border-radius: 50px;
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 110%;
+            right: 0;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border-radius: 0.5rem;
+            z-index: 10;
+            min-width: 320px;
+            padding: 1.2rem 0;
+            border: none;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 0.7rem;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .dropdown-icon {
+            font-size: 2rem;
+            color: #3f51b5;
+            margin-top: 2px;
+        }
+
+        .dropdown-content {
+            flex: 1;
+        }
+
+        .dropdown-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #222;
+            margin-bottom: 0.25rem;
+        }
+
+        .dropdown-subtitle {
+            color: #888;
+            font-size: 0.95rem;
+        }
+
+        .btn-cadastre-se {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.85rem;
+            border-radius: 50px;
+            background: #fff;
+            color: #000;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .btn-cadastre-se:hover {
+            background: rgba(255,255,255,0.9);
+        }
+
+        .btn-primary {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            background-color: #c82333;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            padding-top: 12vh;
+            background: #0a0a0a;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.4;
+            z-index: 0;
+        }
+
+        .hero-bg img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(30%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 10vw, 8rem);
+            font-weight: 400;
+            line-height: 0.95;
+            margin-bottom: 2rem;
+            letter-spacing: -0.04em;
+            max-width: 1200px;
+        }
+
+        .hero p {
+            font-size: clamp(1.2rem, 2vw, 1.8rem);
+            color: #fff;
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+            font-weight: 400;
+            line-height: 1.5;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-style: italic;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-hero-primary {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.85rem;
+            border-radius: 50px;
+            background: #fff;
+            color: #000;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .btn-hero-primary:hover {
+            background: rgba(255,255,255,0.9);
+        }
+
+        .btn-hero-secondary {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.85rem;
+            border-radius: 50px;
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-hero-secondary:hover {
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        /* Stats Section */
+        .stats {
+            background: #fff;
+            padding: 8rem 5%;
+            color: #000;
+        }
+
+        .stats h2 {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 400;
+            line-height: 1.1;
+            margin-bottom: 5rem;
+            letter-spacing: -0.03em;
+            max-width: 900px;
+        }
+
+        .stats h2 span {
+            font-style: italic;
+            font-weight: 300;
+            color: #666;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 4rem;
+            margin-top: 5rem;
+        }
+
+        .stat-item .number {
+            font-size: 4rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item .label {
+            font-size: 1rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Services Section */
+        .services {
+            background: #0a0a0a;
+            padding: 8rem 5%;
+            color: #fff;
+        }
+
+        .services h2 {
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            font-weight: 400;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .services p {
+            font-size: clamp(1rem, 1.5vw, 1.3rem);
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 5rem;
+            max-width: 600px;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .service-card {
+            padding: 2.5rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .service-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-card h3 {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+        }
+
+        .service-card p {
+            color: rgba(255,255,255,0.6);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .service-card .btn-link {
+            font-size: 0.9rem;
+            color: #fff;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+            padding: 0;
+            transition: opacity 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .service-card .btn-link:hover {
+            opacity: 0.7;
+        }
+
+        /* How it Works */
+        .how-it-works {
+            background: #fff;
+            padding: 8rem 5%;
+            color: #000;
+        }
+
+        .how-it-works h2 {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 400;
+            line-height: 1.1;
+            margin-bottom: 5rem;
+            letter-spacing: -0.03em;
+            max-width: 900px;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 4rem;
+        }
+
+        .step-item .number {
+            font-size: 3rem;
+            font-weight: 300;
+            color: #ddd;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .step-item h3 {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+        }
+
+        .step-item p {
+            color: #666;
+            line-height: 1.7;
+            font-size: 1.05rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: #0a0a0a;
+            color: #fff;
+            padding: 5rem 5% 3rem;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h4 {
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+        }
+
+        .footer-section p {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .footer-links h4 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .footer-links div {
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #fff;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 2rem;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.4);
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .nav {
+                gap: 1rem;
+            }
+
+            .services-grid,
+            .steps-grid,
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .hero {
+                padding-top: 8vh;
+            }
+
+            .hero h1 {
+                font-size: clamp(2rem, 15vw, 6rem);
+            }
+
+            .hero p {
+                font-size: clamp(1rem, 4vw, 1.4rem);
+            }
+        }
+
+        /* Simulation Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal h3 {
+            margin-bottom: 1rem;
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .btn-submit:hover {
+            background: var(--primary-dark);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <a href="#" class="logo">
+                <span>BairristaCargo</span>
+                <div class="logo-dot"></div>
+            </a>
+            <nav class="nav">
+                <div class="nav-left">
+                    <a href="#services">Serviços</a>
+                    <a href="#how-it-works">Como Funciona</a>
+                    <a href="#about">Sobre</a>
+                </div>
+                <div class="nav-right">
+                    <a href="#login" class="btn-secondary">Entrar</a>
+                    <div class="dropdown">
+                        <button class="btn-cadastre-se" onclick="toggleDropdown()">Cadastre-se</button>
+                        <div id="cadastre-se-menu" class="dropdown-menu">
+                            <button class="dropdown-item" onclick="window.location.href='#empresa'">
+                                <span class="dropdown-icon">🏢</span>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-title">Empresa de Transporte</div>
+                                    <div class="dropdown-subtitle">Cadastre sua transportadora</div>
+                                </div>
+                            </button>
+                            <button class="dropdown-item" onclick="window.location.href='#autonomo'">
+                                <span class="dropdown-icon">👤</span>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-title">Transportador Autônomo</div>
+                                    <div class="dropdown-subtitle">Ofereça seus serviços</div>
+                                </div>
+                            </button>
+                            <button class="dropdown-item" onclick="window.location.href='#cliente'">
+                                <span class="dropdown-icon">📦</span>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-title">Cliente</div>
+                                    <div class="dropdown-subtitle">Preciso de transporte</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg">
+            <img src="landingPage_img.jpg" alt="BairristaCargo">
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <h1>BAIRRISTACARGO</h1>
+                <p>Conectando quem precisa transportar com os melhores transportadores do Brasil.</p>
+                <div class="hero-buttons">
+                    <button class="btn-hero-primary" onclick="openSimulation()">↗ Simular Mudança ↗</button>
+                    <a href="#register" class="btn-hero-secondary">Seja Transportador</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <h2>Logística que conecta.<br><span>Transporte que transforma.</span></h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="number">500+</div>
+                    <div class="label">Transportes realizados</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number">98%</div>
+                    <div class="label">Taxa de satisfação</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number">150+</div>
+                    <div class="label">Transportadores verificados</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="services">
+        <div class="container">
+            <h2>Nossa abordagem.</h2>
+            <p>Conectamos diferentes necessidades com soluções sob medida.</p>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">🚗</div>
+                    <h3>Precisa de Transporte?</h3>
+                    <p>Simule o preço da sua mudança e encontre transportadores confiáveis.</p>
+                    <button class="btn-link" onclick="openSimulation()">↗ Começar ↗</button>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🚚</div>
+                    <h3>Empresas de Transporte</h3>
+                    <p>Expanda seu negócio conectando-se com clientes que precisam dos seus serviços.</p>
+                    <a href="#register" class="btn-link">↗ Cadastrar Empresa ↗</a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">👤</div>
+                    <h3>Transportadores Autônomos</h3>
+                    <p>Maximize seus ganhos oferecendo seus serviços de transporte em nossa plataforma.</p>
+                    <a href="#register" class="btn-link">↗ Registrar Agora ↗</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <h2>Como funciona.</h2>
+            <div class="steps-grid">
+                <div class="step-item">
+                    <div class="number">01</div>
+                    <h3>Publique sua Solicitação</h3>
+                    <p>Compartilhe suas necessidades de transporte com detalhes sobre o veículo e destino.</p>
+                </div>
+                <div class="step-item">
+                    <div class="number">02</div>
+                    <h3>Receba Orçamentos</h3>
+                    <p>Obtenha ofertas competitivas de transportadores e empresas verificadas.</p>
+                </div>
+                <div class="step-item">
+                    <div class="number">03</div>
+                    <h3>Escolha e Reserve</h3>
+                    <p>Selecione a melhor opção e confirme sua reserva com segurança.</p>
+                </div>
+                <div class="step-item">
+                    <div class="number">04</div>
+                    <h3>Rastreie e Receba</h3>
+                    <p>Monitore seu envio em tempo real até a entrega segura.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="about" class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>BairristaCargo</h4>
+                    <p>Conectando transportes com eficiência e segurança desde 2025.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Plataforma</h4>
+                    <div>
+                        <a href="#services">Serviços</a>
+                        <a href="#how-it-works">Como Funciona</a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Suporte</h4>
+                    <div>
+                        <a href="#help">Central de Ajuda</a>
+                        <a href="#contact">Fale Conosco</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                © 2025 BairristaCargo. Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Simulation Modal -->
+    <div id="simulationModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeSimulation()">&times;</button>
+            <h3>Simular Preço da Mudança</h3>
+            <form onsubmit="handleSimulation(event)">
+                <div class="form-group">
+                    <label for="origem">Cidade de Origem</label>
+                    <input type="text" id="origem" placeholder="Ex: Porto Alegre, RS" required>
+                </div>
+                <div class="form-group">
+                    <label for="destino">Cidade de Destino</label>
+                    <input type="text" id="destino" placeholder="Ex: São Paulo, SP" required>
+                </div>
+                <div class="form-group">
+                    <label for="tipo">Tipo de Mudança</label>
+                    <select id="tipo" required>
+                        <option value="">Selecione...</option>
+                        <option value="residencial">Residencial</option>
+                        <option value="comercial">Comercial</option>
+                        <option value="mudanca">Mudança</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="data">Data da Mudança</label>
+                    <input type="date" id="data" required>
+                </div>
+                <button type="submit" class="btn-submit">Simular Preço</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Simulation modal functions
+        function openSimulation() {
+            document.getElementById('simulationModal').classList.add('active');
+        }
+
+        function closeSimulation() {
+            document.getElementById('simulationModal').classList.remove('active');
+        }
+
+        function handleSimulation(event) {
+            event.preventDefault();
+
+            const origem = document.getElementById('origem').value;
+            const destino = document.getElementById('destino').value;
+            const tipo = document.getElementById('tipo').value;
+            const data = document.getElementById('data').value;
+
+            // Simple simulation logic
+            const distancia = Math.floor(Math.random() * 1000) + 100;
+            const precoBase = distancia * 2.5;
+            const precoFinal = Math.round(precoBase + (precoBase * 0.1)); // +10% markup
+
+            alert(`Simulação para ${tipo} de ${origem} para ${destino}:
+Distância aproximada: ${distancia}km
+Preço estimado: R$ ${precoFinal.toLocaleString('pt-BR')}
+
+Entre em contato conosco para um orçamento personalizado!`);
+
+            closeSimulation();
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Parallax effect for hero section
+        let scrollY = 0;
+        window.addEventListener('scroll', () => {
+            scrollY = window.scrollY;
+            const heroButtons = document.querySelector('.hero-buttons');
+            if (heroButtons) {
+                heroButtons.style.transform = `translateY(${scrollY * 0.15}px)`;
+            }
+        });
+
+        // Dropdown functionality
+        function toggleDropdown() {
+            const menu = document.getElementById('cadastre-se-menu');
+            menu.classList.toggle('active');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('cadastre-se-menu');
+            const button = event.target.closest('.btn-cadastre-se');
+            if (!menu.contains(event.target) && !button) {
+                menu.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

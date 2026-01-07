@@ -1,71 +1,71 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { validators } from '../../utils/validators'
-import './AuthForms.css'
+// LoginForm.tsx - User login with TypeScript
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { validators } from '../../utils/validators';
+import './AuthForms.css';
+import { AxiosError } from 'axios';
 
 function LoginForm() {
-  const navigate = useNavigate()
-  const { login } = useAuth()
+  const navigate = useNavigate();
+  const { login } = useAuth();
   
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     senha: '',
-  })
+  });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
 
     // Validações básicas
     if (!validators.email(formData.email)) {
-      setError('Por favor, insira um email válido.')
-      return
+      setError('Por favor, insira um email válido.');
+      return;
     }
 
     if (!formData.senha) {
-      setError('A senha é obrigatória.')
-      return
+      setError('A senha é obrigatória.');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const res = await login(formData.email, formData.senha)
+      const res = await login(formData.email, formData.senha);
       
       // Roteamento baseado no Tipo de Usuário
       // C = Cliente/Usuário Comum
       // E = Empresa de Transporte
-      // M = Motorista Autônomo (Assumindo 'M' para o futuro)
+      // M = Motorista Autônomo
       
       switch (res?.tipo_usuario) {
         case 'C':
-          navigate('/area-usuario')
-          break
+          navigate('/area-usuario');
+          break;
         case 'E':
-          navigate('/area-empresa')
-          break
+          navigate('/area-empresa');
+          break;
         case 'M':
-          // Caso tenha uma área específica para motorista no futuro
-          navigate('/area-empresa') 
-          break
+          navigate('/area-empresa');
+          break;
         default:
-          // Fallback seguro
-          navigate('/')
+          navigate('/');
       }
 
     } catch (err) {
-      console.error(err)
+      console.error(err);
       let errorMsg = 'Email ou senha incorretos.';
       
-      if (err.response?.data?.detail) {
+      if (err instanceof AxiosError && err.response?.data?.detail) {
         errorMsg = err.response.data.detail;
       }
 
@@ -79,15 +79,55 @@ function LoginForm() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
+      {/* Back to Home Navigation Bar */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        background: 'white',
+        borderBottom: '1px solid #eee',
+        padding: '1rem 2rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        zIndex: 1000,
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      }}>
+        <Link 
+          to="/" 
+          style={{ 
+            textDecoration: 'none', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem',
+            color: '#666',
+            fontSize: '0.95rem',
+            fontWeight: '500',
+            transition: 'color 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.color = '#333'}
+          onMouseOut={(e) => e.currentTarget.style.color = '#666'}
+        >
+          <span style={{ fontSize: '1.2rem' }}>←</span>
+          <span>Voltar para o site</span>
+        </Link>
+        <div style={{ marginLeft: 'auto' }}>
           <Link to="/" style={{ textDecoration: 'none' }}>
-            <h2 className="brand-title" style={{ color: '#333', marginBottom: '0.5rem' }}>BairristaCargo<span style={{ color: '#e53935' }}>.</span></h2>
+            <span style={{ fontWeight: 'bold', color: '#333', fontSize: '1.1rem' }}>
+              BairristaCargo<span style={{ color: '#e53935' }}>.</span>
+            </span>
           </Link>
+        </div>
+      </div>
+
+      <div className="auth-card" style={{ marginTop: '5rem' }}>
+        <div className="auth-header">
+          <h2 className="brand-title" style={{ color: '#333', marginBottom: '0.5rem' }}>Login</h2>
           <p>Bem-vindo de volta! Acesse sua conta.</p>
         </div>
 
@@ -162,7 +202,7 @@ function LoginForm() {
         </form>
       </div>
     </div>
-  )
+  );
 }
 
-export default LoginForm
+export default LoginForm;

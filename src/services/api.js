@@ -6,9 +6,9 @@ const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true', 
+    'ngrok-skip-browser-warning': 'true',
   },
-  timeout: 10000,
+  timeout: 15000, // Aumentado para 15 segundos
 })
 
 // ============================================
@@ -103,13 +103,14 @@ export const simularPrecoMudanca = async (dados) => {
 }
 
 // === EMPRESAS ===
-export const getEmpresaProfile = async (id) => {
-  const response = await api.get(`empresas/profile/${id}/`)
+// ATUALIZADO: Agora usa o caminho oficial do mapa (singleton)
+export const getEmpresaProfile = async () => {
+  const response = await api.get('empresas/perfil/')
   return response.data
 }
 
-export const updateEmpresaProfile = async (id, dados) => {
-  const response = await api.patch(`empresas/profile/${id}/`, dados)
+export const updateEmpresaProfile = async (dados) => {
+  const response = await api.put('empresas/perfil/', dados)
   return response.data
 }
 
@@ -129,13 +130,14 @@ export const deleteVeiculo = async (id) => {
 }
 
 // === MOTORISTAS/FUNCIONÁRIOS ===
+// ATUALIZADO: Agora usa o caminho oficial do mapa
 export const getFuncionarios = async () => {
-  const response = await api.get('motoristas/funcionarios/')
+  const response = await api.get('mudancas/operacional/pds/')
   return response.data
 }
 
 export const addFuncionario = async (formData) => {
-  const response = await api.post('motoristas/funcionarios/', formData, {
+  const response = await api.post('motoristas/cadastro/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
   return response.data
@@ -149,44 +151,46 @@ export const uploadCNH = async (motoristaId, formData) => {
 }
 
 // === CLIENTES ===
+// ATUALIZADO: Agora usa o caminho oficial do mapa
 export const getClienteProfile = async () => {
   const response = await api.get('clientes/')
   return response.data
 }
 
-export const updateClienteProfile = async (id, dados) => {
-  const response = await api.patch(`clientes/${id}/`, dados)
+export const updateClienteProfile = async (dados) => {
+  const response = await api.patch('clientes/', dados)
   return response.data
 }
 
 // === MUDANÇAS (Cliente) ===
+// ATUALIZADO: Agora usa o caminho oficial do mapa
 export const getMinhasMudancas = async () => {
-  const response = await api.get('mudancas/minhas-mudancas/')
+  const response = await api.get('mudancas/cliente/mudancas/')
   return response.data
 }
 
 export const createMudanca = async (dados) => {
-  const response = await api.post('mudancas/minhas-mudancas/', dados)
+  const response = await api.post('mudancas/cliente/mudancas/', dados)
   return response.data
 }
 
 export const deleteMudanca = async (id) => {
-  const response = await api.delete(`mudancas/minhas-mudancas/${id}/`)
+  const response = await api.delete(`mudancas/cliente/mudancas/${id}/`)
   return response.data
 }
 
 export const getMudancaDetalhes = async (id) => {
-  const response = await api.get(`mudancas/minhas-mudancas/${id}/`)
+  const response = await api.get(`mudancas/cliente/mudancas/${id}/`)
   return response.data
 }
 
 export const cancelarMudanca = async (id, motivo) => {
-  const response = await api.post(`mudancas/minhas-mudancas/${id}/cancelar/`, { motivo })
+  const response = await api.post(`mudancas/cliente/mudancas/${id}/cancelar/`, { motivo })
   return response.data
 }
 
 export const avaliarMudanca = async (id, dados) => {
-  const response = await api.post(`mudancas/minhas-mudancas/${id}/avaliar/`, dados)
+  const response = await api.post(`mudancas/cliente/mudancas/${id}/avaliar/`, dados)
   return response.data
 }
 
@@ -197,7 +201,7 @@ export const getMudancasEmpresa = async () => {
 }
 
 export const alocarMotorista = async (mudancaId, motoristaId) => {
-  const response = await api.patch(`mudancas/mudancas-empresa/${mudancaId}/alocar-motorista/`, { motorista_id: motoristaId })
+  const response = await api.patch(`mudancas/empresa/contratos/${mudancaId}/alocar-motorista/`, { motorista_id: motoristaId })
   return response.data
 }
 
@@ -213,8 +217,9 @@ export const createOrcamento = async (dados) => {
 }
 
 // === OFERTAS/MARKETPLACE ===
+// ATUALIZADO: Agora usa o caminho oficial do mapa
 export const getOfertas = async () => {
-  const response = await api.get('mudancas/ofertas/')  // <-- CORRIGIDO
+  const response = await api.get('mudancas/empresa/marketplace/')
   return response.data
 }
 
@@ -263,15 +268,38 @@ export const analisarImagemInventario = async (arquivo) => {
   return response.data
 }
 
-// MARKETPLACE
-export const getMudancasDisponiveis = async () => {
-  const response = await api.get('mudancas/ofertas/')
+// === MUDANÇAS - EMPRESA VIEW (CONTRATOS) ===
+export const getMudancasEnviadas = async () => {
+  const response = await api.get('mudancas/empresa/contratos/')
+  return response.data
+}
+
+export const getPropostasEnviadas = async () => {
+  const response = await api.get('mudancas/propostas/')
+  return response.data
+}
+
+// === MUDANÇAS - MOTORISTA VIEW ===
+export const getMudancasMotorista = async () => {
+  const response = await api.get('mudancas/operacional/pds/')
+  return response.data
+}
+
+export const getTripHistory = async () => {
+  const response = await api.get('mudancas/operacional/historico/')
+  return response.data
+}
+
+// === MUDANÇAS - STATUS UPDATE ===
+export const updateMudancaStatus = async (mudancaId, status) => {
+  const response = await api.patch(`mudancas/cliente/mudancas/${mudancaId}/`, { status })
   return response.data
 }
 
 // === ORÇAMENTOS - CRUD COMPLETO ===
-export const enviarProposta = async (dados) => {
-  const response = await api.post('mudancas/orcamentos/', dados)
+// ATUALIZADO: Agora usa o caminho oficial do mapa
+export const enviarProposta = async (mudancaId, dados) => {
+  const response = await api.post(`mudancas/${mudancaId}/enviar-proposta/`, dados)
   return response.data
 }
 
@@ -290,9 +318,24 @@ export const rejeitarOrcamento = async (orcamentoId, motivo) => {
   return response.data
 }
 
-// === PAGAMENTOS - CHECKOUT E ESCROW ===
-export const processarPagamento = async (dados) => {
-  const response = await api.post('pagamentos/processar/', dados)
+// === PAGAMENTOS - CONTAS BANCÁRIAS ===
+// NOVO: Implementado conforme mapa oficial
+export const cadastrarContaBancaria = async (dados) => {
+  const response = await api.post('pagamentos/contas-bancarias/', dados)
+  return response.data
+}
+
+// === PAGAMENTOS - WEBHOOK ===
+// NOVO: Implementado conforme mapa oficial
+export const processarWebhook = async (dados) => {
+  const response = await api.post('pagamentos/webhook/', dados)
+  return response.data
+}
+
+// === PAGAMENTOS - CHECKOUT ===
+// ATUALIZADO: Agora usa o caminho oficial do mapa
+export const processarPagamento = async (orcamentoId, dados) => {
+  const response = await api.post(`mudancas/propostas/${orcamentoId}/pagamento/`, dados)
   return response.data
 }
 
@@ -302,20 +345,21 @@ export const getHistoricoPagamentos = async () => {
 }
 
 // === WORKFLOW OPERACIONAL - MUDANÇAS ===
+// ATUALIZADO: Agora usa o caminho oficial do mapa
 export const alocarMotoristaWorkflow = async (mudancaId, motoristaId) => {
-  const response = await api.patch(`mudancas/${mudancaId}/alocar-motorista/`, { 
+  const response = await api.patch(`mudancas/empresa/contratos/${mudancaId}/alocar-motorista/`, { 
     motorista_id: motoristaId 
   })
   return response.data
 }
 
 export const iniciarServico = async (mudancaId) => {
-  const response = await api.post(`mudancas/${mudancaId}/iniciar-servico/`)
+  const response = await api.post(`mudancas/operacional/pds/${mudancaId}/iniciar-servico/`)
   return response.data
 }
 
 export const finalizarServico = async (mudancaId) => {
-  const response = await api.post(`mudancas/${mudancaId}/finalizar-servico/`)
+  const response = await api.post(`mudancas/operacional/pds/${mudancaId}/finalizar-servico/`)
   return response.data
 }
 
@@ -358,6 +402,20 @@ export const completarCadastro = async (dados) => {
 // === EMPRESAS - CADASTRAR MOTORISTA ===
 export const cadastrarMotorista = async (dados) => {
   const response = await api.post('empresas/cadastrar-motorista/', dados)
+  return response.data
+}
+
+// === FISCAL - NOTAS FISCAIS ===
+// NOVO: Implementado conforme mapa oficial
+export const getNotasFiscais = async () => {
+  const response = await api.get('fiscal/notas-fiscais/')
+  return response.data
+}
+
+export const downloadNotaFiscal = async (notaId) => {
+  const response = await api.get(`fiscal/notas-fiscais/${notaId}/download/`, {
+    responseType: 'blob'
+  })
   return response.data
 }
 

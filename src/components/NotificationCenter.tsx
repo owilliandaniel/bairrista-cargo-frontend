@@ -1,0 +1,129 @@
+import { useState, useEffect } from 'react'
+import { getNotificacoes, marcarComoLida } from '../services/api'
+import { useToast } from '../contexts/ToastContext'
+import './NotificationCenter.css'
+
+interface Notificacao {
+  id: number
+  titulo: string
+  mensagem: string
+  lida: boolean
+  criado_em: string
+}
+
+interface NotificacoesResponse {
+  results?: Notificacao[]
+}
+
+function NotificationCenter() {
+  const [notifications, setNotifications] = useState<Notificacao[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [isOpen, setIsOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const { showToast } = useToast()
+
+  useEffect(() => {
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true)
+      const data = await getNotificacoes()
+      const list = Array.isArray(data) ? data : (data as NotificacoesResponse).results || []
+      setNotifications(list)
+      setUnreadCount(list.filter(n => !n.lida).length)
+    } catch (err) {
+      console.error('Erro ao carregar notificações:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      await marcarComoLida(notificationId)
+      fetchNotifications()
+      showToast('Notificação marcada como lida', 'success')
+    } catch (err) {
+      console.error('Erro ao marcar notificação:', err)
+      showToast('Erro ao marcar notificação', 'error')
+    }
+  }
+
+  const handleToggle = () => {
+    setIsOpen(!isOpen)
+  }
+
+  return (
+    <div className="notification-center">
+      <button className="notification-bell" onClick={handleToggle} title="Notificações">
+        <span className="bell-icon">🔔</span>
+        {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="notification-overlay" onClick={handleToggle}></div>
+          <div className="notification-dropdown">
+            <div className="notification-header">
+              <h4>Notificações</h4>
+              <button className="close-btn" onClick={handleToggle}>
+                ✕
+              </button>
+            </div>
+
+            <div className="notification-list">
+              {loading && notifications.length === 0 ? (
+                <div className="notification-loading">Carregando...</div>
+              ) : notifications.length === 0 ? (
+                <div className="notification-empty">
+                  <p>📭 Nenhuma notificação</p>
+                </div>
+              ) : (
+                notifications.map(notif => (
+                  <div
+                    key={notif.id}
+                    className={`notification-item ${notif.lida ? 'read' : 'unread'}`}
+                    onClick={() => !notif.lida && handleMarkAsRead(notif.id)}
+                  >
+                    {!notif.lida && <span className="unread-dot"></span>}
+                    <div className="notification-content">
+                      <strong className="notification-title">{notif.titulo}</strong>
+                      <p className="notification-message">{notif.mensagem}</p>
+                      <small className="notification-time">
+                        {new Date(notif.criado_em).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </small>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {notifications.length > 0 && (
+              <div className="notification-footer">
+                <button
+                  className="view-all-btn"
+                  onClick={() => {
+                    setIsOpen(false)
+                  }}
+                >
+                  Ver todas
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+export default NotificationCenter

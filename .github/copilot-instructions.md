@@ -1,102 +1,173 @@
 # BairristaCargo Frontend - AI Coding Guide
 
+**Updated:** January 2026
+
 ## Project Overview
-React + Vite frontend for a cargo/moving services marketplace connecting transportadoras (shipping companies), motoristas (drivers), and clientes (customers). Three distinct user dashboards with role-based access control.
+React 19 + Vite SPA for a cargo/moving services marketplace. Three distinct user dashboards (empresa/transportadora, motorista/driver, usuario/customer) with role-based access control, integrated with Django REST backend via ngrok.
 
 ## Architecture & User Roles
 
 ### User Types & Role Mapping
-- **empresa** (e): Transportadora companies - manage fleet, drivers, and service offerings
-- **motorista** (m): Drivers - view assigned jobs (often managed by empresa)
-- **usuario/cliente** (c/u): End customers - request and track services
+- **empresa** (e): Transportadora companies - manage fleet, drivers, service pricing, marketplace access
+- **motorista** (m): Drivers - view assigned jobs and route tracking
+- **usuario/cliente** (c/u): End customers - create shipment requests, track moves
 - **admin** (a): System administrators
 
-Role mapping happens in [PrivateRoute.jsx](src/pages/auth/PrivateRoute.jsx#L26-L35) - backend sends single-letter codes, frontend normalizes to full names for routing.
+Backend sends single-letter role codes; [PrivateRoute.jsx](src/pages/auth/PrivateRoute.jsx#L26-L35) normalizes via `roleMap` object to route-friendly names (e→empresa, m→motorista, c/u→usuario, a→admin).
 
-### Dashboard Separation
-- `/area-empresa` → [AreaCliente_Empresa.tsx](src/pages/clienteEmpresa/AreaCliente_Empresa.tsx) - Company dashboard with state-driven section rendering using `SectionKey` type
+### Dashboard Routes & Section-Based Navigation
+- `/area-empresa` → [AreaCliente_Empresa.tsx](src/pages/clienteEmpresa/AreaCliente_Empresa.tsx) - Company dashboard
+  - Uses `SectionKey` type and state-driven switch rendering in `renderContent()`
+  - Sections: marketplace, visao_geral, gestao, financeiro, frota, equipe, rotas, config
+  - Nesting example: `gestao` renders [EmpresaOperacional.tsx](src/pages/clienteEmpresa/EmpresaOperacional.tsx)
 - `/area-usuario` → [AreaCliente_Usuario.jsx](src/pages/clienteUsuario/AreaCliente_Usuario.jsx) - Customer dashboard
-- `/area-motorista` → [AreaCliente_Motorista.jsx](src/pages/clienteEmpresa/AreaCliente_Motorista.jsx) - Driver dashboard
+- `/area-motorista` → [AreaCliente_Motorista.jsx](src/pages/clienteMotorista/AreaCliente_Motorista.jsx) - Driver dashboard
 
 ## Authentication Flow
 
-### Registration → Validation → Login
-1. User registers via [RegistrarEmpresa.jsx](src/pages/RegistrarEmpresa.jsx) or [RegistrarUsuario.jsx](src/pages/RegistrarUsuario.jsx)
-2. Backend sends validation code by email
-3. User validates with [ValidateCodeForm.jsx](src/pages/auth/ValidateCodeForm.jsx)
-4. On successful validation, tokens are stored and user is auto-logged in
-5. [AuthContext.tsx](src/contexts/AuthContext.tsx) manages global auth state
+### Registration → Code Validation → Auto-Login
+1. User registers with email + password via [RegistrarEmpresa.jsx](src/pages/RegistrarEmpresa.jsx) or [RegistrarUsuario.jsx](src/pages/RegistrarUsuario.jsx)
+   - Data sent as `multipart/form-data` (see [authService.js](src/services/authService.js#L1-L20))
+   - Backend returns success/error in `response.data.detail`
+2. Backend sends validation code to email
+3. User submits code in [ValidateCodeForm.jsx](src/pages/auth/ValidateCodeForm.jsx)
+4. On validation success, backend returns `{ access, refresh, user_id, email, nome, tipo_usuario, empresa_id, ... }`
+5. Tokens and user data stored in `localStorage` (keys: `access_token`, `refresh_token`, `user_data`)
+6. [AuthContext.tsx](src/contexts/AuthContext.tsx) automatically logs user in via `validateCode()` method
 
-### Token Management
-- Access token + refresh token stored in `localStorage`
-- Axios interceptor in [api.js](src/services/api.js#L14-L73) auto-injects Bearer token and handles refresh on 401
-- **Critical**: All requests include `'ngrok-skip-browser-warning': 'true'` header for development (ngrok proxy requirement)
-- Refresh token endpoint: `POST usuarios/login/refresh/` with `{ refresh: refreshToken }` body
-- On refresh failure, localStorage is cleared and user redirected to `/login`
+### Token Management & Axios Interceptors
+- Centralized axios instance: [api.js](src/services/api.js)
+- **Request interceptor** (lines 14-27): Injects `Authorization: Bearer {access_token}` into all requests
+- **Response interceptor** (lines 33-73): On 401, attempts refresh via `POST usuarios/login/refresh/` with `{ refresh: refreshToken }`
+  - Success: updates `access_token`, retries original request
+  - Failure: clears localStorage and redirects to `/login`
+- **Critical header**: `'ngrok-skip-browser-warning': 'true'` must be present (set in axios defaults and refresh call)
 
 ## API Integration Patterns
 
-### Base Configuration
-```javascript
-// All API calls go through centralized axios instance in src/services/api.js
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://...ngrok.../api/v1/'
-```
+### Base Configuration & Axios Setup
+- Base URL: `import.meta.env.VITE_API_URL` (set in `.env`), defaults to hardcoded ngrok URL
+- All requests go through [api.js](src/services/api.js) - do NOT use raw `fetch` or direct `axios` calls
+- Timeout: 10 seconds
+- FormData for file uploads: `headers: { 'Content-Type': 'multipart/form-data' }` (example: [authService.js#L3-L20](src/services/authService.js#L3-L20))
 
 ### Service Organization
-- [api.js](src/services/api.js) - Centralized API functions grouped by domain (empresas, motoristas, mudancas, etc.)
-- [authService.js](src/services/authService.js) - Dedicated auth operations (register, login, validateCode, logout)
+- [api.js](src/services/api.js) - Centralized API functions grouped by domain
+  - Exports: `getTiposImovelProxy()`, `simularPrecoMudanca()`, and domain-specific functions (empresas, motoristas, mudancas, etc.)
+  - Error handling: log both status and `error.response?.data` for debugging
+- [authService.js](src/services/authService.js) - Dedicated auth operations
+  - Methods: `register()`, `validateCode()`, `login()`, `logout()`, `getCurrentUser()`, `isAuthenticated()`
+  - Always call `authService` methods, never duplicate auth logic
 - API functions are imported directly: `import { getFrota, addVeiculo } from '../../services/api'`
 
-### Integration Guide
-See [Roteiro_Integracao_Frontend.md](Roteiro_Integracao_Frontend.md) for complete API endpoint documentation, payload formats, and integration workflows.
+### Error Handling Pattern
+Standard error extraction across components:
+```javascript
+} catch (error) {
+  const errorMessage = error.response?.data?.detail || 'Erro na operação'
+  // Pass to toast via context
+}
+```
 
-# Copilot instructions — BairristaCargo frontend (concise)
+# Copilot Instructions — BairristaCargo Frontend (Concise)
 
-Purpose: make AI contributors productive in this repo. Focus on patterns, commands, and safe edits — not general dev advice.
+## Quick Start
+- **Run**: `npm run dev` (Vite dev server on port 3000 + auto-open)
+- **Build**: `npm run build` (production bundle)
+- **Lint**: `npm run lint` (ESLint)
+- **Test**: `npm run test` (Playwright e2e tests in `./e2e/`)
+- **Env**: Create `.env` with `VITE_API_URL=https://{ngrok-url}/api/v1/`
 
-- **Run / build**: `npm run dev` (Vite), `npm run build`, `npm run preview`, `npm run lint`.
-- **Env**: set `VITE_API_URL` in `.env` (points to backend ngrok/URL).
+## Core Architecture
+- **Stack**: React 19 + Vite + TypeScript + Axios + React Router
+- **Types**: [types.ts](src/types.ts) defines `User`, `Mudanca`, `SectionKey`, etc.
+- **Auth**: [AuthContext.tsx](src/contexts/AuthContext.tsx) + [authService.js](src/services/authService.js)
+- **API**: Centralized axios instance [api.js](src/services/api.js) with request/response interceptors
+- **UI**: Dashboard sections use state-driven rendering (see `AreaCliente_Empresa.tsx`)
+- **State Management**: No Redux/Zustand - relies on Context API + localStorage for tokens/user data
 
-Architecture & key areas
-- React + Vite SPA with TypeScript types in [types.ts](src/types.ts)
-- Routes and role-protected areas live in `src/App.jsx` and `src/pages/auth/PrivateRoute.jsx`
-- Central API layer: `src/services/api.js` (axios instance, token refresh interceptor). All network calls should use functions exported here
-- Auth flows live in `src/contexts/AuthContext.tsx` and `src/services/authService.js` (register, validate, login, logout)
-- UI patterns: dashboards split per role under `src/pages/clienteEmpresa/` and `src/pages/clienteUsuario/` with state-driven section rendering (see `AreaCliente_Empresa.tsx`)
+## Must-Follow Conventions
 
-Important conventions (must-follow)
-- All API requests include header `'ngrok-skip-browser-warning': 'true'` — axios instance sets this. Keep it when adding raw fetch/axios calls
-- File uploads: use `FormData()` and send `Content-Type: multipart/form-data`. See `src/pages/auth/OCRDocumentUpload.jsx` and `src/pages/clienteEmpresa/CadastrarMotorista.tsx` for examples
-- LocalStorage keys: the app expects `access_token`, `refresh_token`, and `user`/`user_data` in places. Do not rename keys unless updating all usages (`AuthContext.tsx`, `api.js`)
-- Role normalization: backend may return single letters (e, m, c, a) or full names. Use `PrivateRoute.jsx` roleMap behavior when modifying role logic
-- Brazilian validations: use [validators.js](src/utils/validators.js) for CPF/CNPJ/phone formatting and validation
+### localStorage Keys (DO NOT CHANGE)
+```javascript
+localStorage.setItem('access_token', token)   // JWT access token
+localStorage.setItem('refresh_token', token)  // Refresh token
+localStorage.setItem('user_data', JSON.stringify(user)) // User object
+```
+Used by: `AuthContext.tsx`, `api.js`, `authService.js`. Update all three if you rename keys.
 
-Patterns & examples
-- Token refresh: `api.js` intercepts 401 → posts to `usuarios/login/refresh/` with `{ refresh }`. Follow same pattern if adding endpoints that require auth
-- Error messages: components use the same extraction pattern from `err.response?.data?.detail` to produce user-facing toast text. Reuse this block instead of inventing new error parsing
-- Form handling: `useRegistration.js` is a reusable hook used by registration pages — follow its API when adding new registration-like forms
-- Dashboard sections: use `SectionKey` type and switch rendering in `renderContent()` method (see `AreaCliente_Empresa.tsx`)
+### API Requests
+- **Always use [api.js](src/services/api.js) exports** — never raw `axios` or `fetch`
+- **FormData for uploads**: `const fd = new FormData(); fd.append('file', file)` then `headers: { 'Content-Type': 'multipart/form-data' }`
+- **Error parsing**: Extract `error.response?.data?.detail` for user messages
+- **Header**: `'ngrok-skip-browser-warning': 'true'` is set globally in api.js; preserve it if adding raw requests
 
-Where to look (quick links)
-- Routing & app entry: `src/App.jsx`
-- Auth context: `src/contexts/AuthContext.tsx`
-- API helpers: `src/services/api.js`, `src/services/authService.js`
-- OCR / AI uploads: `src/pages/auth/OCRDocumentUpload.jsx`, `src/pages/auth/AIFileUpload.jsx`
-- Validators: `src/utils/validators.js`
-- Toasts: `src/contexts/ToastContext.tsx`, styles in `src/components/Toast.css`
-- Types: `src/types.ts`
+### Role Normalization
+- Backend may return single letters (`e`, `m`, `c`, `a`) or full names
+- [PrivateRoute.jsx](src/pages/auth/PrivateRoute.jsx#L26-L35) has `roleMap` for translation
+- Use `user.tipo_usuario` to check roles; always lowercase before comparing
 
-How AI should edit code (rules)
-- Small, focused changes only. Prefer editing single file per PR unless feature spans multiple files
-- Preserve existing conventions: token keys, header usage, FormData pattern, and toast-based error UX
-- Add unit tests/manual test steps where behavior is critical (auth, upload). If unsure about side effects, leave a TODO comment and notify maintainers
+### File Uploads & Validation
+- Use `FormData()` + multipart (example: [CadastrarMotorista.tsx](src/pages/clienteEmpresa/CadastrarMotorista.tsx))
+- Brazilian validators: [validators.js](src/utils/validators.js) for CPF/CNPJ/phone
+- OCR uploads: [OCRDocumentUpload.jsx](src/pages/auth/OCRDocumentUpload.jsx)
+- AI file uploads: [AIFileUpload.jsx](src/pages/auth/AIFileUpload.jsx)
 
-If you change API shapes or token storage
-- Update `src/services/api.js`, `src/contexts/AuthContext.tsx`, and any code reading `localStorage` in the same commit
+## Patterns & Examples
 
-Questions / next steps
-- If anything here is unclear or you want more examples (e.g., token refresh or OCR flow), say which area to expand
+### Token Refresh Flow
+```javascript
+// api.js Response Interceptor:
+// On 401 → POST usuarios/login/refresh/ with { refresh: token }
+// If success: update localStorage['access_token'] and retry request
+// If failure: clear localStorage and redirect to /login
+```
 
----
-This file is intentionally concise — ask for expansion on any section.
-[validators.js](src/utils/validators.js) provides Brazilian-specific validation
+### Dashboard Section Pattern
+```typescript
+// AreaCliente_Empresa.tsx uses SectionKey type + setState to render components
+const [section, setSection] = useState<SectionKey>('marketplace')
+const renderContent = () => {
+  switch(section) {
+    case 'marketplace': return <Marketplace />
+    case 'visao_geral': return <EmpresaOverview />
+    // ... etc
+  }
+}
+```
+
+### Toast Notifications
+- Context: [ToastContext.tsx](src/contexts/ToastContext.tsx)
+- Usage: `const { showToast } = useToast(); showToast('message', 'success' | 'error')`
+- Styles: [Toast.css](src/components/Toast.css)
+
+### Reusable Form Hook
+- [useRegistration.js](src/hooks/useRegistration.js) for registration forms
+- Handles form state, submission, error display
+
+## File Structure (Key Directories)
+```
+src/
+  contexts/          # AuthContext, ToastContext
+  services/          # api.js (axios), authService.js (auth methods)
+  pages/
+    auth/            # LoginForm, RegistrarEmpresa, ValidateCodeForm, PrivateRoute
+    clienteEmpresa/  # AreaCliente_Empresa + subsections (Marketplace, Config, etc.)
+    clienteUsuario/  # Customer dashboard
+    clienteMotorista/# Driver dashboard
+  components/        # Reusable UI (Header, Toast, Icons)
+  utils/             # validators.js (CPF/CNPJ/phone)
+  types.ts           # TypeScript interfaces
+e2e/                 # Playwright test specs (auth.spec.ts, ocr.spec.ts)
+```
+
+## Code Review Checklist
+- **localStorage**: Did you add/rename keys? Update AuthContext, api.js, authService
+- **API calls**: Always via api.js exports? FormData for uploads?
+- **Auth changes**: Update all usages if modifying token storage or refresh logic
+- **Role logic**: Does it handle both single-letter and full role names?
+- **Error UX**: Extract error.response?.data?.detail for user toasts
+- **Tests**: Add e2e tests in `./e2e/` for critical flows (auth, uploads, marketplace)
+
+## Integration Documentation
+See [Roteiro_Integracao_Frontend.md](Roteiro_Integracao_Frontend.md) for complete API endpoint reference, payload examples, and workflow details.

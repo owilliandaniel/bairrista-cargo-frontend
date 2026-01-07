@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getMudancasDisponiveis } from '../../services/api';
+import { getOfertas } from '../../services/api';
 import VisualizarOfertas from './VisualizarOfertas';
 import { Mudanca, User } from '../../types';
 import '../../components/AreaCliente.css';
@@ -21,7 +21,7 @@ export default function Marketplace({ user }: MarketplaceProps) {
     try {
       setLoading(true);
       // 'any' é usado aqui para lidar com a resposta da API antes de formatar
-      const dados: any = await getMudancasDisponiveis();
+      const dados: any = await getOfertas();
       let lista: Mudanca[] = [];
       
       if (Array.isArray(dados)) {

@@ -1,0 +1,173 @@
+// RegistrarUsuario.tsx - User registration with TypeScript
+import { useRegistration } from '../hooks/useRegistration';
+import { validators, masks } from '../utils/validators';
+import { Link } from 'react-router-dom';
+import AuthCard from '../pages/auth/AuthCard';
+import AIFileUpload from '../pages/auth/AIFileUpload';
+
+interface UserFormData {
+  nome: string;
+  email: string;
+  senha: string;
+  confirmarSenha: string;
+  telefone: string;
+  cpf: string;
+  telefone_celular: string;
+  endereco_padrao: string;
+}
+
+const initialFormData: UserFormData = {
+  nome: '',
+  email: '',
+  senha: '',
+  confirmarSenha: '',
+  telefone: '',
+  cpf: '',
+  telefone_celular: '',
+  endereco_padrao: '',
+};
+
+function validate(formData: UserFormData): string | null {
+  if (!formData.nome.trim()) return 'Nome é obrigatório';
+  if (!validators.email(formData.email)) return 'Email inválido';
+  if (!validators.senha(formData.senha)) return 'A senha deve ter no mínimo 6 caracteres';
+  if (formData.senha !== formData.confirmarSenha) return 'As senhas não coincidem';
+  if (!validators.cpf(formData.cpf)) return 'CPF inválido';
+  return null;
+}
+
+function RegistrarUsuario() {
+  const {
+    formData,
+    setFormData,
+    loading,
+    analyzing,
+    setAnalyzing,
+    error,
+    setError,
+    handleSubmit,
+  } = useRegistration(initialFormData, 'C', validate);
+
+  const handleDataExtracted = (data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      nome: data.nome || prev.nome,
+      cpf: data.cpf ? masks.cpf(data.cpf) : (data.documento ? masks.cpf(data.documento) : prev.cpf),
+      email: data.email || prev.email,
+      telefone_celular: data.celular ? masks.telefone(data.celular) : (data.telefone ? masks.telefone(data.telefone) : prev.telefone_celular),
+      endereco_padrao: data.endereco || prev.endereco_padrao,
+    }));
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    let val = value;
+    if (name === 'cpf') val = masks.cpf(value);
+    if ((name === 'telefone' || name === 'telefone_celular')) val = masks.telefone(value);
+
+    setFormData((prev) => ({ ...prev, [name]: val }));
+  };
+
+  return (
+    <>
+      {/* Back to Home Navigation Bar */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        background: 'white',
+        borderBottom: '1px solid #eee',
+        padding: '1rem 2rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        zIndex: 1000,
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+      }}>
+        <Link 
+          to="/" 
+          style={{ 
+            textDecoration: 'none', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem',
+            color: '#666',
+            fontSize: '0.95rem',
+            fontWeight: '500',
+            transition: 'color 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.color = '#333'}
+          onMouseOut={(e) => e.currentTarget.style.color = '#666'}
+        >
+          <span style={{ fontSize: '1.2rem' }}>←</span>
+          <span>Voltar para o site</span>
+        </Link>
+        <div style={{ marginLeft: 'auto' }}>
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <span style={{ fontWeight: 'bold', color: '#333', fontSize: '1.1rem' }}>
+              BairristaCargo<span style={{ color: '#e53935' }}>.</span>
+            </span>
+          </Link>
+        </div>
+      </div>
+
+      <div style={{ marginTop: '5rem' }}>
+        <AuthCard
+          title="Registrar Usuário"
+          subtitle="Preencha os dados ou use a IA para agilizar"
+          error={error}
+        >
+          <AIFileUpload
+            documentType="CNH"
+            onDataExtracted={handleDataExtracted}
+            uploadId="user-doc-upload"
+            labelIcon="🤖📄"
+            labelText="Preencher automaticamente com IA"
+            labelHint="Tire uma foto da sua CNH ou RG"
+            analyzingText="Lendo CNH ou RG..."
+            analyzing={analyzing}
+            setAnalyzing={setAnalyzing}
+            setError={setError}
+          />
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="form-group">
+              <label htmlFor="nome">Nome</label>
+              <input type="text" name="nome" value={formData.nome} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="cpf">CPF</label>
+              <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} required placeholder="000.000.000-00" />
+            </div>
+            <div className="form-group">
+              <label htmlFor="telefone_celular">Celular</label>
+              <input type="text" name="telefone_celular" value={formData.telefone_celular} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="endereco_padrao">Endereço Padrão</label>
+              <input type="text" name="endereco_padrao" value={formData.endereco_padrao} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="senha">Senha</label>
+              <input type="password" name="senha" value={formData.senha} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="confirmarSenha">Confirmar Senha</label>
+              <input type="password" name="confirmarSenha" value={formData.confirmarSenha} onChange={handleChange} required />
+            </div>
+            <button className="btn-primary" type="submit" disabled={loading || analyzing}>
+              {loading ? 'Registrando...' : 'Registrar'}
+            </button>
+          </form>
+        </AuthCard>
+      </div>
+    </>
+  );
+}
+
+export default RegistrarUsuario;

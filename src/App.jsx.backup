@@ -10,6 +10,7 @@ import ValidateCodeForm from './pages/auth/ValidateCodeForm'
 import AreaCliente_Empresa from './pages/clienteEmpresa/AreaCliente_Empresa'
 import AreaUsuario from './pages/clienteUsuario/AreaCliente_Usuario'
 import AreaCliente_Motorista from './pages/clienteMotorista/AreaCliente_Motorista'
+import BackendStatus from './components/BackendStatus'
 import './App.css'
 import './components/novos-componentes.css'
 
@@ -56,6 +57,7 @@ function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <BackendStatus />
       </Router>
       </ToastProvider>
     </AuthProvider>

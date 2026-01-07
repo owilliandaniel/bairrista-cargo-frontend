@@ -1,33 +1,63 @@
-import React, { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { useNavigate, Link } from 'react-router-dom'
-import Dashboard from './Dashboard'
-import MinhasSolicitacoes from './Solicitacoes'
-import Pagamentos from './Pagamentos'
-import Config from './Config'
-import PropostasRecebidas from './PropostasRecebidas'
-import './AreaCliente.css'
+// AreaCliente_Usuario.tsx - Customer dashboard wrapper with TypeScript
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import NotificationCenter from '../../components/NotificationCenter';
+import Dashboard from './Dashboard';
+import MinhasSolicitacoes from './Solicitacoes';
+import Pagamentos from './Pagamentos';
+import Config from './Config';
+import PropostasRecebidas from './PropostasRecebidas';
+import './AreaCliente.css';
+
+interface UserFormData {
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone: string;
+  endereco: string;
+}
+
+interface Order {
+  id: number;
+  origem: string;
+  destino: string;
+  data: string;
+  valor: string;
+  status: string;
+  rating: number;
+}
+
+interface Card {
+  id: number;
+  number: string;
+  holder: string;
+  expiry: string;
+  cvv: string;
+}
+
+type ActiveView = 'dashboard' | 'orders' | 'proposals' | 'payments' | 'profile';
 
 function AreaUsuario() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   
-  const [activeView, setActiveView] = useState('dashboard')
+  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserFormData>({
     nome: '',
     email: '',
     cpf: '',
     telefone: '',
     endereco: ''
-  })
+  });
 
-  const [orders, setOrders] = useState([])
-  const [cards, setCards] = useState([])
+  const [orders, _setOrders] = useState<Order[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
 
   useEffect(() => {
     if (!user) {
-      navigate('/')
+      navigate('/');
     } else {
       setFormData({
         nome: user.nome || '',
@@ -35,14 +65,14 @@ function AreaUsuario() {
         cpf: user.cpf || '',
         telefone: user.telefone || '',
         endereco: user.endereco_padrao || ''
-      })
+      });
     }
-  }, [user, navigate])
+  }, [user, navigate]);
 
   const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
+    logout();
+    navigate('/');
+  };
 
   return (
     <div className="admin-layout">
@@ -106,6 +136,7 @@ function AreaUsuario() {
             </span>
           </div>
           <div className="topbar-controls">
+            <NotificationCenter />
             <button className="control-btn-logout" onClick={handleLogout}>
               <span>🚪</span> Sair
             </button>
@@ -121,7 +152,7 @@ function AreaUsuario() {
         </main>
       </div>
     </div>
-  )
+  );
 }
 
-export default AreaUsuario
+export default AreaUsuario;

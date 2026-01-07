@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Icons } from '../../components/EmpresaIcons';
 import { FinancialRecord } from '../../types';
+import ContasBancarias from './ContasBancarias';
+import NotasFiscais from './NotasFiscais';
 
 const MOCK_FINANCIAL_SERVICES: FinancialRecord[] = [
   { id: 1, desc: 'Frete Carga Seca - SP/RJ', data: '05/11/2023', valor: 4500, status: 'recebido', cliente: 'Indústrias Metalúrgicas' },
@@ -97,6 +99,16 @@ function EmpresaFinanceiro() {
                     </div>
                 ))}
             </div>
+        </div>
+
+        {/* Bank Accounts Section */}
+        <div className="mt-4">
+            <ContasBancarias />
+        </div>
+
+        {/* Invoices Section */}
+        <div className="mt-4">
+            <NotasFiscais />
         </div>
     </div>
   );

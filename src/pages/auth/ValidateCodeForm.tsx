@@ -1,71 +1,81 @@
-import { useState } from 'react'
-import { authService } from '../../services/authService'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import './AuthForms.css'
+// ValidateCodeForm.tsx - Email validation code form with TypeScript
+import { useState } from 'react';
+import { authService } from '../../services/authService';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import './AuthForms.css';
+import { AxiosError } from 'axios';
+
+interface LocationState {
+  email?: string;
+}
 
 function ValidateCodeForm() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { validateCode } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { validateCode } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
-    email: location.state?.email || '',
+    email: (location.state as LocationState)?.email || '',
     codigo: '',
-  })
-  const [codigoRecebido, setCodigoRecebido] = useState('')
-  const handleSolicitarCodigo = async () => {
-    setError('')
-    setCodigoRecebido('')
-    try {
-      const codigo = await authService.solicitarCodigoValidacao(formData.email)
-      setCodigoRecebido(codigo)
-    } catch (err) {
-      setError('Erro ao solicitar código')
-    }
-  }
+  });
+  const [codigoRecebido, setCodigoRecebido] = useState('');
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
+  const handleSolicitarCodigo = async () => {
+    setError('');
+    setCodigoRecebido('');
+    try {
+      const codigo = await (authService as any).solicitarCodigoValidacao(formData.email);
+      setCodigoRecebido(codigo);
+    } catch {
+      setError('Erro ao solicitar código');
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     
     // Limitar código a 6 dígitos
-    if (name === 'codigo' && value.length > 6) return
+    if (name === 'codigo' && value.length > 6) return;
     
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
 
     if (formData.codigo.length !== 6) {
-      setError('O código deve ter 6 dígitos')
-      return
+      setError('O código deve ter 6 dígitos');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const response = await validateCode(formData.email, formData.codigo)
-      setSuccess('Conta ativada com sucesso! Redirecionando...')
+      const response = await validateCode(formData.email, formData.codigo);
+      setSuccess('Conta ativada com sucesso! Redirecionando...');
       
       setTimeout(() => {
         // Redirecionar baseado no tipo de usuário
         if (response.tipo_usuario === 'E') {
-          navigate('/area-empresa')
+          navigate('/area-empresa');
         } else {
-          navigate('/area-usuario')
+          navigate('/area-usuario');
         }
-      }, 1500)
+      }, 1500);
     } catch (err) {
-      setError(err.response?.data?.erro || err.response?.data?.detail || 'Código inválido ou expirado')
+      const errorMessage = err instanceof AxiosError
+        ? err.response?.data?.erro || err.response?.data?.detail || 'Código inválido ou expirado'
+        : 'Código inválido ou expirado';
+      setError(errorMessage);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-container">
@@ -128,7 +138,7 @@ function ValidateCodeForm() {
         </form>
       </div>
     </div>
-  )
+  );
 }
 
-export default ValidateCodeForm
+export default ValidateCodeForm;

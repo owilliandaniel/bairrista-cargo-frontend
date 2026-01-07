@@ -31,7 +31,7 @@ export const useRegistration = (initialFormData, userType, validationFunction) =
     setLoading(true);
     try {
       const payload = { ...formData, tipo_usuario: userType };
-      const res = await register(payload);
+      await register(payload);
       
       // Navigate to validation, assuming success
       alert('Cadastro realizado com sucesso! Verifique seu email para o código de validação.');

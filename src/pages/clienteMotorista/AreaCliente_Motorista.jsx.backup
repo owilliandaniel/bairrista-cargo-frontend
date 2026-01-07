@@ -2,6 +2,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Icons as SharedIcons } from "../../components/EmpresaIcons";
+import { getMudancasMotorista } from '../../services/api'
+import NotificationCenter from '../../components/NotificationCenter'
 import WorkflowMudanca from './WorkflowMudanca'
 import '../../components/AreaCliente.css'
 
@@ -12,12 +14,6 @@ const DriverIcons = {
 
 // Mesclando os ícones
 const Icons = { ...SharedIcons, ...DriverIcons };
-
-// DADOS MOCKADOS (VIAGENS)
-const MOCK_TRIPS = [
-  { id: 101, origem: 'São Paulo, SP', destino: 'Campinas, SP', status: 'Em Andamento', valor: 'R$ 850,00', data: 'Hoje', cliente: 'Logística Express' },
-  { id: 102, origem: 'Campinas, SP', destino: 'Sorocaba, SP', status: 'Agendado', valor: 'R$ 600,00', data: 'Amanhã', cliente: 'João Mudanças' },
-];
 
 const MENU_ITEMS = [
   { key: 'painel', label: 'Painel de Corridas', icon: <Icons.Dashboard /> },
@@ -31,18 +27,46 @@ function AreaCliente_Motorista() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [section, setSection] = useState('painel');
+  const [mudancas, setMudancas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentTrip, setCurrentTrip] = useState(null);
 
   useEffect(() => { if (!user) navigate('/'); }, [user, navigate]);
 
+  useEffect(() => {
+    fetchMudancas();
+  }, []);
+
+  const fetchMudancas = async () => {
+    try {
+      setLoading(true);
+      const data = await getMudancasMotorista();
+      const lista = Array.isArray(data) ? data : data.results || [];
+      setMudancas(lista);
+      
+      // Find current trip (in progress)
+      const currentInProgress = lista.find(m => m.status === 'AND' || m.status === 'EM_ANDAMENTO');
+      setCurrentTrip(currentInProgress || null);
+    } catch (err) {
+      console.error('Erro ao carregar mudanças:', err);
+      setMudancas([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- PAINEL PRINCIPAL (DASHBOARD) ---
-  const RenderDashboard = () => (
+  const RenderDashboard = () => {
+    if (loading) return <div style={{padding:'2rem', color:'#666'}}>Carregando viagens...</div>;
+
+    return (
     <div className="fade-in">
       <div className="overview-header">
          <h1>Olá, {user?.nome?.split(' ')[0] || 'Motorista'}</h1>
          <p>Você está <strong>Online</strong> e vinculado à empresa {user?.empresa_vinculada || 'Bairrista'}.</p>
       </div>
 
-      {/* Card de Viagem Atual em Destaque */}
+      {currentTrip ? (
       <div className="content-box" style={{ borderColor: 'var(--accent-green)', borderWidth: '2px' }}>
          <div className="flex-between mb-2">
             <h3 style={{ color: 'var(--accent-green)', margin: 0 }}>Viagem Atual</h3>
@@ -54,7 +78,7 @@ function AreaCliente_Motorista() {
                <div className="point-dot start"></div>
                <div className="point-info">
                    <small>COLETA</small>
-                   <strong>São Paulo, SP</strong>
+                   <strong>{currentTrip.cidade_origem}, {currentTrip.estado_origem}</strong>
                </div>
             </div>
             <div className="route-line-vertical" style={{ height: '30px' }}></div>
@@ -62,7 +86,7 @@ function AreaCliente_Motorista() {
                <div className="point-dot end"></div>
                <div className="point-info">
                    <small>ENTREGA</small>
-                   <strong>Campinas, SP</strong>
+                   <strong>{currentTrip.cidade_destino}, {currentTrip.estado_destino}</strong>
                </div>
             </div>
          </div>
@@ -76,44 +100,84 @@ function AreaCliente_Motorista() {
             </button>
          </div>
       </div>
+      ) : (
+        <div className="content-box">
+          <p style={{textAlign: 'center', color: '#666', padding: '2rem'}}>
+            Nenhuma viagem em andamento no momento.
+          </p>
+        </div>
+      )}
 
-      {/* Lista de Oportunidades Rápidas */}
+      {/* Lista de Próximas Demandas */}
       <h3 className="mt-4 mb-2" style={{ color: '#444' }}>Próximas Demandas da Empresa</h3>
       <div className="finance-list">
-         <div className="transaction-row">
+        {mudancas.filter(m => m.status !== 'FIN' && m.status !== 'FINALIZADO' && m.id !== currentTrip?.id).slice(0, 3).map(mudanca => (
+         <div key={mudanca.id} className="transaction-row">
             <div className="t-status-icon"><div className="icon-circle green"><Icons.Box /></div></div>
             <div className="t-desc">
-               <strong>Frete Rápido - Eletrônicos</strong>
-               <small>5km de distância • 200kg</small>
+               <strong>{mudanca.cidade_origem} → {mudanca.cidade_destino}</strong>
+               <small>{new Date(mudanca.data_mudanca).toLocaleDateString('pt-BR')}</small>
             </div>
-            <div className="t-amount" style={{ color: 'var(--primary-color)' }}>R$ 450,00</div>
-            <button className="btn-secondary-sm" style={{ marginLeft: '10px' }}>Aceitar</button>
+            <div className="t-amount" style={{ color: 'var(--primary-color)' }}>
+              {mudanca.valor_final_empresa ? `R$ ${parseFloat(mudanca.valor_final_empresa).toFixed(2)}` : '--'}
+            </div>
          </div>
+        ))}
+        {mudancas.length === 0 && (
+          <p style={{textAlign: 'center', color: '#666', padding: '1rem'}}>
+            Nenhuma demanda disponível no momento.
+          </p>
+        )}
       </div>
     </div>
-  );
+    );
+  };
 
   // --- HISTÓRICO DE VIAGENS ---
-  const RenderTrips = () => (
+  const RenderTrips = () => {
+    if (loading) return <div style={{padding:'2rem', color:'#666'}}>Carregando histórico...</div>;
+
+    const getStatusLabel = (status) => {
+      switch(status) {
+        case 'AND': case 'EM_ANDAMENTO': return { label: 'Em Andamento', className: 'blue' };
+        case 'AGE': case 'AGENDADO': return { label: 'Agendado', className: 'yellow' };
+        case 'FIN': case 'FINALIZADO': return { label: 'Concluído', className: 'green' };
+        default: return { label: 'Pendente', className: 'gray' };
+      }
+    };
+
+    return (
     <div className="fade-in">
        <div className="box-header-simple"><h3>Histórico e Agendamentos</h3></div>
        <div className="services-list mt-4">
-          {MOCK_TRIPS.map(trip => (
-             <div key={trip.id} className="service-card-row">
+          {mudancas.length === 0 ? (
+            <p style={{textAlign: 'center', color: '#666', padding: '2rem'}}>
+              Nenhuma viagem encontrada.
+            </p>
+          ) : (
+            mudancas.map(mudanca => {
+              const statusInfo = getStatusLabel(mudanca.status);
+              return (
+             <div key={mudanca.id} className="service-card-row">
                 <div className="service-info-main">
-                   <div className={`service-type-badge ${trip.status === 'Em Andamento' ? 'blue' : 'yellow'}`}>{trip.status}</div>
-                   <h3>{trip.origem} ➝ {trip.destino}</h3>
-                   <small>{trip.cliente}</small>
+                   <div className={`service-type-badge ${statusInfo.className}`}>{statusInfo.label}</div>
+                   <h3>{mudanca.cidade_origem}, {mudanca.estado_origem} ➝ {mudanca.cidade_destino}, {mudanca.estado_destino}</h3>
+                   <small>Cliente: {mudanca.cliente_nome || 'N/A'}</small>
                 </div>
                 <div className="service-meta">
-                   <div className="meta-item"><Icons.Clock /> <span>{trip.data}</span></div>
-                   <div className="meta-item price" style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{trip.valor}</div>
+                   <div className="meta-item"><Icons.Clock /> <span>{new Date(mudanca.data_mudanca).toLocaleDateString('pt-BR')}</span></div>
+                   <div className="meta-item price" style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>
+                     {mudanca.valor_final_empresa ? `R$ ${parseFloat(mudanca.valor_final_empresa).toFixed(2)}` : '--'}
+                   </div>
                 </div>
              </div>
-          ))}
+              );
+            })
+          )}
        </div>
     </div>
-  );
+    );
+  };
 
   // --- FINANCEIRO (GANHOS) ---
   const RenderFinance = () => (
@@ -207,6 +271,7 @@ function AreaCliente_Motorista() {
         <header className="admin-topbar">
             <div className="breadcrumbs"><span>Motorista</span> / <span>{MENU_ITEMS.find(i => i.key === section)?.label}</span></div>
             <div className="topbar-controls">
+                <NotificationCenter />
                 <Link to="/" className="control-link"><Icons.Home /> Site</Link>
                 <button onClick={logout} className="control-btn-logout"><Icons.Logout /> Sair</button>
             </div>

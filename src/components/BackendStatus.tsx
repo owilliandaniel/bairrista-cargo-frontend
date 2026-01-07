@@ -1,0 +1,71 @@
+import { useState, useEffect } from 'react'
+import { authService } from '../services/authService'
+
+type StatusType = 'checking' | 'online' | 'offline' | 'error'
+
+function BackendStatus() {
+  const [status, setStatus] = useState<StatusType>('checking')
+  const [message, setMessage] = useState('Verificando conexão...')
+
+  useEffect(() => {
+    checkBackend()
+  }, [])
+
+  const checkBackend = async () => {
+    try {
+      const result = await authService.checkBackendHealth()
+      setStatus(result.status as StatusType)
+      setMessage(result.message)
+    } catch (error) {
+      console.error('Erro ao verificar backend:', error)
+      setStatus('error')
+      setMessage('Erro ao verificar backend')
+    }
+  }
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'online':
+        return 'text-green-600'
+      case 'offline':
+        return 'text-red-600'
+      case 'error':
+        return 'text-yellow-600'
+      default:
+        return 'text-gray-600'
+    }
+  }
+
+  const getStatusIcon = () => {
+    switch (status) {
+      case 'online':
+        return '🟢'
+      case 'offline':
+        return '🔴'
+      case 'error':
+        return '🟡'
+      default:
+        return '⚪'
+    }
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 bg-white border rounded-lg shadow-lg p-4 max-w-sm">
+      <div className="flex items-center space-x-2">
+        <span className="text-lg">{getStatusIcon()}</span>
+        <div>
+          <div className="font-semibold text-sm">Status do Backend</div>
+          <div className={`text-xs ${getStatusColor()}`}>{message}</div>
+        </div>
+      </div>
+      <button
+        onClick={checkBackend}
+        className="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+      >
+        Verificar Novamente
+      </button>
+    </div>
+  )
+}
+
+export default BackendStatus

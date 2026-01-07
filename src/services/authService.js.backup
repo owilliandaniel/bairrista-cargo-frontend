@@ -1,16 +1,40 @@
 import api from './api'
 
 export const authService = {
+  // Verifica se o backend está acessível
+  async checkBackendHealth() {
+    try {
+      console.log('authService: Verificando saúde do backend...')
+      await api.get('/', { timeout: 5000 })
+      console.log('authService: Backend está saudável')
+      return { status: 'online', message: 'Backend acessível' }
+    } catch (error) {
+      console.error('authService: Backend não acessível', error.message)
+      return { 
+        status: 'offline', 
+        message: 'Backend não está acessível. Verifique se o servidor está rodando.',
+        error: error.message
+      }
+    }
+  },
+
   async register(data) {
     console.log('authService: Iniciando requisição de registro...')
+
+    // Verifica conectividade antes de tentar registrar
+    const healthCheck = await this.checkBackendHealth()
+    if (healthCheck.status === 'offline') {
+      throw new Error(`Backend não acessível: ${healthCheck.message}`)
+    }
+
     try {
       const formData = new FormData()
       Object.keys(data).forEach(key => {
         if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
           formData.append(key, data[key])
         }
-      })
-      
+      });
+
       const response = await api.post('/usuarios/registrar/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -25,21 +49,22 @@ export const authService = {
   },
 
   async validateCode(email, codigo) {
-    const response = await api.post('/usuarios/validar/', { email, codigo })
+    const response = await api.post('/usuarios/validar-codigo/', { email, codigo })
     return response.data
   },
 
   async login(email, senha) {
-    const response = await api.post('usuarios/login/', { email, senha })
+    const response = await api.post('/usuarios/login/', { email, senha })
+
     console.log('Resposta completa do login:', response.data)
-    
+
     if (response.data.access) {
       console.log('Token access:', response.data.access)
       console.log('Token refresh:', response.data.refresh)
-      
+
       localStorage.setItem('access_token', response.data.access)
       localStorage.setItem('refresh_token', response.data.refresh)
-      
+
       const userData = {
         user_id: response.data.user_id,
         email: response.data.email,
@@ -49,11 +74,11 @@ export const authService = {
         nome_fantasia: response.data.nome_fantasia,
         tipo_atuacao: response.data.tipo_atuacao,
       }
-      
+
       localStorage.setItem('user_data', JSON.stringify(userData))
       return response.data
     }
-    
+
     throw new Error('Resposta de login inválida')
   },
 

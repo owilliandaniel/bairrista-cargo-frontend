@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Icons } from '../../components/EmpresaIcons'; 
+import NotificationCenter from '../../components/NotificationCenter';
 import Marketplace from './Marketplace';
 import EmpresaOverview from './EmpresaOverview';
 import EmpresaOperacional from './EmpresaOperacional';
@@ -118,6 +119,7 @@ function AreaCliente_Empresa() {
            </div>
            <div className="top-bar-title">{pageInfo.title}</div>
            <div className="top-bar-actions">
+             <NotificationCenter />
              <div className="company-greeting">Olá, {user?.nome || 'Transportador'}!</div>
            </div>
         </header>

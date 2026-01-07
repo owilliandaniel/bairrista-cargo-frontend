@@ -1,109 +1,132 @@
-import { useState, useEffect } from 'react'
-import { getPropostasRecebidas, processarPagamento } from '../../services/api'
-import { useToast } from '../../contexts/ToastContext'
+// PropostasRecebidas.tsx - Customer received proposals with TypeScript
+import { useState, useEffect } from 'react';
+import { getPropostasRecebidas, processarPagamento, getOrcamentos } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 
-/**
- * Componente para visualização de propostas recebidas e checkout
- * Visão Cliente - Escolher empresa e pagar
- */
+interface Proposta {
+  id: number;
+  mudanca: number;
+  empresa: number;
+  empresa_nome?: string;
+  empresa_avaliacao?: number;
+  empresa_avaliacoes_total?: number;
+  valor_final_empresa: number;
+  valor_empacotamento: number;
+  valor_desmontagem_montagem: number;
+  observacoes_empresa?: string;
+}
 
-function PropostasRecebidas({ mudancaId }) {
-  const toast = useToast()
-  const [propostas, setPropostas] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [checkoutAberto, setCheckoutAberto] = useState(null)
-  const [processandoPagamento, setProcessandoPagamento] = useState(false)
-  const [formPagamento, setFormPagamento] = useState({
+interface FormPagamento {
+  metodo_pagamento: 'CARTAO' | 'PIX' | 'BOLETO';
+  parcelas: number;
+}
+
+interface PropostasRecebidasProps {
+  mudancaId?: number;
+}
+
+function PropostasRecebidas({ mudancaId }: PropostasRecebidasProps) {
+  const toast = useToast();
+  const [propostas, setPropostas] = useState<Proposta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [checkoutAberto, setCheckoutAberto] = useState<number | null>(null);
+  const [processandoPagamento, setProcessandoPagamento] = useState(false);
+  const [formPagamento, setFormPagamento] = useState<FormPagamento>({
     metodo_pagamento: 'CARTAO',
     parcelas: 1
-  })
+  });
 
   useEffect(() => {
-    carregarPropostas()
-  }, [])
+    const carregarDados = async () => {
+      try {
+        const data = await getOrcamentos();
+        setPropostas(data);
+      } catch (error) {
+        console.error('Erro ao carregar propostas:', error);
+      }
+    };
+    
+    carregarDados();
+  }, []);
 
   const carregarPropostas = async () => {
     try {
-      setLoading(true)
-      const responseData = await getPropostasRecebidas()
+      setLoading(true);
+      const responseData = await getPropostasRecebidas();
 
-      let lista = []
+      let lista: any[] = [];
       if (Array.isArray(responseData)) {
-        lista = responseData
+        lista = responseData;
       } else if (responseData && Array.isArray(responseData.results)) {
-        lista = responseData.results
+        lista = responseData.results;
       } else if (responseData && Array.isArray(responseData.data)) {
-        lista = responseData.data
+        lista = responseData.data;
       }
 
-      // Filtrar por mudança específica se fornecido
       const propostasFiltradas = mudancaId 
         ? lista.filter(p => p.mudanca === mudancaId)
-        : lista
-      setPropostas(propostasFiltradas)
+        : lista;
+      setPropostas(propostasFiltradas);
     } catch (err) {
-      console.error('Erro ao carregar propostas:', err)
-      setPropostas([])
+      console.error('Erro ao carregar propostas:', err);
+      setPropostas([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const abrirCheckout = (proposta) => {
-    setCheckoutAberto(proposta.id)
+  const abrirCheckout = (proposta: Proposta) => {
+    setCheckoutAberto(proposta.id);
     setFormPagamento({
       metodo_pagamento: 'CARTAO',
       parcelas: 1
-    })
-  }
+    });
+  };
 
-  const handleChangePagamento = (e) => {
-    const { name, value } = e.target
-    setFormPagamento(prev => ({ ...prev, [name]: value }))
-  }
+  const handleChangePagamento = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormPagamento(prev => ({ ...prev, [name]: value }));
+  };
 
-  const handlePagar = async (e) => {
-    e.preventDefault()
-    setProcessandoPagamento(true)
+  const handlePagar = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setProcessandoPagamento(true);
 
     try {
-      const payload = {
-        orcamento_id: checkoutAberto,
+      const resultado = await processarPagamento(checkoutAberto!, {
         metodo_pagamento: formPagamento.metodo_pagamento,
-        parcelas: parseInt(formPagamento.parcelas)
-      }
-
-      const resultado = await processarPagamento(payload)
+        parcelas: parseInt(formPagamento.parcelas.toString())
+      });
       
       if (resultado.status === 'APROVADO') {
-        toast.success(resultado.mensagem)
-        setCheckoutAberto(null)
-        carregarPropostas()
+        toast.success(resultado.mensagem);
+        setCheckoutAberto(null);
+        carregarPropostas();
       } else {
-        toast.error('Pagamento não aprovado. Tente novamente.')
+        toast.error('Pagamento não aprovado. Tente novamente.');
       }
     } catch (err) {
-      console.error('Erro ao processar pagamento:', err)
-      toast.error('Erro ao processar pagamento. Verifique os dados e tente novamente.')
+      console.error('Erro ao processar pagamento:', err);
+      toast.error('Erro ao processar pagamento. Verifique os dados e tente novamente.');
     } finally {
-      setProcessandoPagamento(false)
+      setProcessandoPagamento(false);
     }
-  }
+  };
 
-  const calcularValorTotal = (proposta) => {
-    const base = parseFloat(proposta.valor_final_empresa) || 0
-    const empacotamento = parseFloat(proposta.valor_empacotamento) || 0
-    const montagem = parseFloat(proposta.valor_desmontagem_montagem) || 0
-    return (base + empacotamento + montagem).toFixed(2)
-  }
+  const calcularValorTotal = (proposta: Proposta): string => {
+    const base = parseFloat(proposta.valor_final_empresa.toString()) || 0;
+    const empacotamento = parseFloat(proposta.valor_empacotamento.toString()) || 0;
+    const montagem = parseFloat(proposta.valor_desmontagem_montagem.toString()) || 0;
+    return (base + empacotamento + montagem).toFixed(2);
+  };
 
-  const calcularValorParcela = (proposta) => {
-    const total = parseFloat(calcularValorTotal(proposta))
-    return (total / formPagamento.parcelas).toFixed(2)
-  }
+  const calcularValorParcela = (proposta: Proposta): string => {
+    const total = parseFloat(calcularValorTotal(proposta));
+    return (total / formPagamento.parcelas).toFixed(2);
+  };
 
   if (loading) {
-    return <div className="propostas-loading">Carregando propostas...</div>
+    return <div className="propostas-loading">Carregando propostas...</div>;
   }
 
   if (propostas.length === 0) {
@@ -112,13 +135,12 @@ function PropostasRecebidas({ mudancaId }) {
         <p>Você ainda não recebeu propostas para esta mudança.</p>
         <p className="propostas-hint">💡 As empresas enviarão orçamentos em breve!</p>
       </div>
-    )
+    );
   }
 
-  // Ordenar por valor total (menor primeiro)
   const propostasOrdenadas = [...propostas].sort((a, b) => 
     parseFloat(calcularValorTotal(a)) - parseFloat(calcularValorTotal(b))
-  )
+  );
 
   return (
     <div className="propostas-container">
@@ -141,18 +163,18 @@ function PropostasRecebidas({ mudancaId }) {
             <div className="proposta-valores">
               <div className="valor-item">
                 <span className="label">Serviço de Mudança:</span>
-                <span className="value">R$ {parseFloat(proposta.valor_final_empresa).toFixed(2)}</span>
+                <span className="value">R$ {parseFloat(proposta.valor_final_empresa.toString()).toFixed(2)}</span>
               </div>
               {proposta.valor_desmontagem_montagem > 0 && (
                 <div className="valor-item">
                   <span className="label">Desmontagem/Montagem:</span>
-                  <span className="value">R$ {parseFloat(proposta.valor_desmontagem_montagem).toFixed(2)}</span>
+                  <span className="value">R$ {parseFloat(proposta.valor_desmontagem_montagem.toString()).toFixed(2)}</span>
                 </div>
               )}
               {proposta.valor_empacotamento > 0 && (
                 <div className="valor-item">
                   <span className="label">Empacotamento:</span>
-                  <span className="value">R$ {parseFloat(proposta.valor_empacotamento).toFixed(2)}</span>
+                  <span className="value">R$ {parseFloat(proposta.valor_empacotamento.toString()).toFixed(2)}</span>
                 </div>
               )}
               <div className="valor-total">
@@ -239,7 +261,7 @@ function PropostasRecebidas({ mudancaId }) {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
-export default PropostasRecebidas
+export default PropostasRecebidas;

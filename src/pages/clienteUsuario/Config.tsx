@@ -1,13 +1,29 @@
-import React, { useState } from 'react'
-import '../../components/AreaCliente.css'
+// Config.tsx - Customer settings with TypeScript
+import React, { useState } from 'react';
+import '../../components/AreaCliente.css';
+import { User } from '../../types';
 
-function Config({ user, formData, setFormData }) {
-  const [isEditingProfile, setIsEditingProfile] = useState(false)
+interface UserFormData {
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone: string;
+  endereco: string;
+}
 
-  const handleSaveProfile = (e) => {
-    e.preventDefault()
-    setIsEditingProfile(false)
-  }
+interface ConfigProps {
+  user?: User | null;
+  formData: UserFormData;
+  setFormData: (data: UserFormData) => void;
+}
+
+function Config({ formData, setFormData }: ConfigProps) {
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  const handleSaveProfile = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsEditingProfile(false);
+  };
 
   return (
     <div className="fade-in content-box" style={{ maxWidth: '800px' }}>
@@ -83,7 +99,7 @@ function Config({ user, formData, setFormData }) {
         )}
       </form>
     </div>
-  )
+  );
 }
 
-export default Config
+export default Config;
